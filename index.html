@@ -14,7 +14,32 @@ $('dayLabel').textContent=date.toLocaleDateString('en-US',{weekday:'long',month:
 $('quote').textContent=lesson.quote;$('explanation').textContent=lesson.explanation;$('challenge').textContent=lesson.challenge;
 function persist(){localStorage.setItem('mindset-golf-saved',JSON.stringify([...saved]))}function updateSave(){$('save').textContent=saved.has(lesson.id)?'★ Saved':'☆ Save message'}updateSave();
 $('save').onclick=()=>{saved.has(lesson.id)?saved.delete(lesson.id):saved.add(lesson.id);persist();updateSave();renderSaved()};
-$('share').onclick=async()=>{const msg=lesson.quote+'\n\n'+lesson.explanation+'\n\nToday’s challenge: '+lesson.challenge+'\n\nMindset Tags Golf';try{if(navigator.share)await navigator.share({title:'Mindset Tags Golf',text:msg});else if(navigator.clipboard){await navigator.clipboard.writeText(msg);alert('Message copied!')}else prompt('Copy this message:',msg)}catch(e){}};
+function showShareOptions(msg){
+  const shade=document.createElement('div');
+  shade.setAttribute('role','dialog');shade.setAttribute('aria-label','Share mindset message');
+  shade.style.cssText='position:fixed;inset:0;z-index:100;background:#0009;display:flex;align-items:center;justify-content:center;padding:20px';
+  const panel=document.createElement('div');
+  panel.style.cssText='background:white;color:#183044;padding:20px;border-radius:16px;max-width:420px;width:100%;box-shadow:0 10px 50px #0004';
+  const heading=document.createElement('h2');heading.textContent='Share today’s mindset';
+  const hint=document.createElement('p');hint.textContent='Choose Email, Text, or copy the message below.';
+  const actions=document.createElement('div');actions.className='buttons';
+  const email=document.createElement('a');email.className='action';email.textContent='✉ Email';email.href='mailto:?subject='+encodeURIComponent('Mindset Tags Golf')+'&body='+encodeURIComponent(msg);email.style.textDecoration='none';
+  const sms=document.createElement('a');sms.className='action secondary';sms.textContent='✉ Text';sms.href='sms:&body='+encodeURIComponent(msg);sms.style.textDecoration='none';
+  actions.append(email,sms);
+  const area=document.createElement('textarea');area.value=msg;area.readOnly=true;area.setAttribute('aria-label','Message to copy');area.style.cssText='width:100%;height:115px;padding:10px;border:1px solid #b5c9ce;border-radius:9px;font-size:14px';
+  const copy=document.createElement('button');copy.className='action';copy.textContent='Copy message';
+  copy.onclick=async()=>{let success=false;try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(msg);success=true}}catch(e){}
+    if(!success){area.focus();area.select();area.setSelectionRange(0,area.value.length);try{success=document.execCommand('copy')}catch(e){}}
+    copy.textContent=success?'✓ Copied — paste into any app':'Select the text above and tap Copy';
+  };
+  const close=document.createElement('button');close.className='action secondary';close.textContent='Close';close.style.marginTop='8px';close.onclick=()=>shade.remove();
+  panel.append(heading,hint,actions,area,copy,close);shade.append(panel);shade.addEventListener('click',e=>{if(e.target===shade)shade.remove()});document.body.append(shade);
+}
+$('share').onclick=async()=>{
+  const msg=lesson.quote+'\n\n'+lesson.explanation+'\n\nToday’s challenge: '+lesson.challenge+'\n\nMindset Tags Golf';
+  if(typeof navigator.share==='function'){try{await navigator.share({title:'Mindset Tags Golf',text:msg});return}catch(e){if(e.name==='AbortError')return}}
+  showShareOptions(msg);
+};
 function switchTab(tab){['today','explore','favorites'].forEach(x=>$(x).classList.toggle('hidden',tab!==x));document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));if(tab==='favorites')renderSaved();window.scrollTo(0,0)}
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));$('another').onclick=()=>switchTab('explore');
 function card(l){const div=document.createElement('article');div.className='lesson';const eyebrow=document.createElement('div');eyebrow.className='eyebrow';eyebrow.textContent=l.category;const title=document.createElement('h3');title.textContent=l.quote;const desc=document.createElement('p');desc.textContent=l.explanation;const chal=document.createElement('p');chal.innerHTML='<strong>Challenge:</strong> ';chal.append(document.createTextNode(l.challenge));const button=document.createElement('button');button.className='back';button.textContent=saved.has(l.id)?'★ Remove from saved':'☆ Save';button.onclick=()=>{saved.has(l.id)?saved.delete(l.id):saved.add(l.id);persist();renderSaved();renderBrowse(selectedCategory);updateSave()};div.append(eyebrow,title,desc,chal,button);return div}
